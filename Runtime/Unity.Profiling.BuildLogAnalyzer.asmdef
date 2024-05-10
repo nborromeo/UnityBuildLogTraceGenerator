@@ -1,0 +1,16 @@
+{
+    "name": "Unity.Profiling.BuildLogAnalyzer",
+    "rootNamespace": "",
+    "references": [
+        "GUID:39013643cf30d4534a6c0a619d7bdca7"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

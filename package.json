@@ -1,0 +1,10 @@
+{
+  "name": "com.unity.build-log-analyzer",
+  "version": "0.1.0",
+  "displayName": "Build Log Analyzer",
+  "description": "A tool to parse timestamped build logs to generate chrome tracefiles of the build process",
+  "keywords": [
+    "performance",
+    "analysis"
+  ]
+}
