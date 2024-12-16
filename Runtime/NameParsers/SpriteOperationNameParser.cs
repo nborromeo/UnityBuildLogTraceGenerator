@@ -8,7 +8,7 @@ namespace Unity.Profiling.BuildLogAnalyzer.NameParsers
         public string GetName(Marker marker)
         {
             ref var message = ref marker.EndMessage;
-            var opNameStartIndex = BuildLogParser.MessageInitIndex + OperationNameOffset;
+            var opNameStartIndex = marker.EndMessageInitIndex + OperationNameOffset;
             var opNameEndIndex = message.IndexOf('\"', opNameStartIndex) - OperationNameEndOffset;
             return "Sprite Op: " + message.Substring(opNameStartIndex, opNameEndIndex - opNameStartIndex);
         }

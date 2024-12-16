@@ -7,7 +7,7 @@ namespace Unity.Profiling.BuildLogAnalyzer.ArgsParsers
         public string GetArgs(Marker marker)
         {
             ref var message = ref marker.EndMessage;
-            var fileNameIndex = BuildLogParser.MessageInitIndex + FileNameOffset;
+            var fileNameIndex = marker.EndMessageInitIndex + FileNameOffset;
             var extensionIndex = message.IndexOf('.', fileNameIndex);
             var fileNameEndIndex = message.IndexOf(" using Guid(", extensionIndex);
             return fileNameEndIndex < 0

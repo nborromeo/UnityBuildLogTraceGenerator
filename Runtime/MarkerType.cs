@@ -8,7 +8,8 @@ namespace Unity.Profiling.BuildLogAnalyzer
         public string name;
         public string openText;
         public string[] mustHave;
-        public string[] closeTexts;
+        public string[] closeStartingTexts;
+        public string[] closeContainsTexts;
         public IMarkerArgsParser argsParser;
         public IMarkerNameParser nameParser;
         public string formatOverride;
@@ -46,11 +47,25 @@ namespace Unity.Profiling.BuildLogAnalyzer
 
         public bool ShouldCloseMarker(ref string message)
         {
-            for (int i = 0; i < closeTexts.Length; i++)
+            if (closeStartingTexts != null)
             {
-                if (message.StartsWith(closeTexts[i]))
+                for (int i = 0; i < closeStartingTexts.Length; i++)
                 {
-                    return true;
+                    if (message.StartsWith(closeStartingTexts[i]))
+                    {
+                        return true;
+                    }
+                }
+            }
+            
+            if (closeContainsTexts != null)
+            {
+                for (int i = 0; i < closeContainsTexts.Length; i++)
+                {
+                    if (message.Contains(closeContainsTexts[i]))
+                    {
+                        return true;
+                    }
                 }
             }
 

@@ -17,8 +17,12 @@ namespace Unity.Profiling.BuildLogAnalyzer
         public bool HasEndMessage => EndLine >= 0;
         public long MessageLine => HasInitMessage ? InitLine : EndLine;
         public ref string InitMessage => ref Parser.Lines[InitLine - 1];
+        public int InitMessageInitIndex => BuildLogParser.Current.GetMessageInitIndex(ref InitMessage);
         public ref string EndMessage => ref Parser.Lines[EndLine - 1];
+        public int EndMessageInitIndex => BuildLogParser.Current.GetMessageInitIndex(ref EndMessage);
+        
         public ref string GetMessage(int indexOffset) => ref Parser.Lines[MessageLine - 1 + indexOffset];
+        public int GetMessageInitIndex(int indexOffset) => BuildLogParser.Current.GetMessageInitIndex(ref GetMessage(indexOffset));
 
         public Marker(MarkerType type)
         {

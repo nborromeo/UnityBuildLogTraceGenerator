@@ -17,7 +17,7 @@ namespace Unity.Profiling.BuildLogAnalyzer
             {
                 name = "Unity Process",
                 openText = "Unity Editor version:",
-                closeTexts = new[] {"Memory Statistics:"}
+                closeStartingTexts = new[] {"Memory Statistics:"}
             },
             new SingleMessageMarker
             {
@@ -46,7 +46,7 @@ namespace Unity.Profiling.BuildLogAnalyzer
             {
                 name = "Asset Import",
                 openText = "Start importing ",
-                closeTexts = new[] {" -> (artifact id: "},
+                closeStartingTexts = new[] {" -> (artifact id: "},
                 argsParser = new AssetImporterArgsParser()
             },
             new SingleMessageMarker
@@ -69,13 +69,13 @@ namespace Unity.Profiling.BuildLogAnalyzer
             {
                 name = "Domain Reload",
                 openText = "Begin MonoManager ReloadAssembly",
-                closeTexts = new[] {"Domain Reload Profiling: "}
+                closeStartingTexts = new[] {"Domain Reload Profiling: "}
             },
             new()
             {
                 name = "Addressables Build",
                 openText = "DisplayProgressbar: Processing Addressable Group",
-                closeTexts = new[]
+                closeStartingTexts = new[]
                 {
                     "Addressable content build failure (duration : ",
                     "Addressable content successfully built (duration : "
@@ -85,13 +85,43 @@ namespace Unity.Profiling.BuildLogAnalyzer
             {
                 name = "Scene load",
                 openText = "Opening scene ",
-                closeTexts = new[] {"\tTotal Operation Time:   "},
+                closeStartingTexts = new[] {"\tTotal Operation Time:   "},
             },
             new()
             {
                 name = "Build Process",
                 openText = "BuildPlayer: start building",
-                closeTexts = new[] {"Build Finished, Result:"},
+                closeStartingTexts = new[] {"Build Finished, Result:"},
+            },
+            new()
+            {
+                name = "Packing artifacts",
+                openText = "Progress.Start Packing: ",
+                closeStartingTexts = new[] {"Packing: "}
+            },
+            new()
+            {
+                name = "Archiving artifacts",
+                openText = " [Publishing artifacts] Creating archive ",
+                closeContainsTexts = new[] {"] Archive was created, file size "}
+            },
+            new()
+            {
+                name = "Publishing artifacts",
+                openText = " [Publishing artifacts] Publishing ",
+                closeStartingTexts = new[] {" [Publishing artifacts] Publishing ", "Will publish "}
+            },
+            new()
+            {
+                name = "Reading build settings",
+                openText = " [Read build settings from revision ",
+                closeStartingTexts = new[] {"The build is removed from the queue"}
+            },
+            new()
+            {
+                name = "Archive and compress bundles",
+                openText = "DisplayProgressbar: Archive And Compress Bundles",
+                closeStartingTexts = new[] {"DisplayProgressbar: Generate Location Lists Task"}
             }
         };
     }

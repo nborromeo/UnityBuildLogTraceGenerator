@@ -1,3 +1,5 @@
+using System;
+
 namespace Unity.Profiling.BuildLogAnalyzer.ArgsParsers
 {
     public class SpriteTextureGenerationArgsParser : IMarkerArgsParser
@@ -8,12 +10,13 @@ namespace Unity.Profiling.BuildLogAnalyzer.ArgsParsers
         {
             //TODO: This is the next atlas name, not the current one, fix this if possible
             ref var message = ref marker.GetMessage(1);
-            if (message.IndexOf("Processing Atlas : ", BuildLogParser.MessageInitIndex) < 0)
+            var initIndex = marker.GetMessageInitIndex(1);
+            if (message.IndexOf("Processing Atlas : ", initIndex, StringComparison.Ordinal) < 0)
             {
                 return string.Empty;
             }
 
-            var initNameIndex = BuildLogParser.MessageInitIndex + AtlasNameOffset;
+            var initNameIndex = initIndex + AtlasNameOffset;
             return $", \"atlasName\":\"{message.Substring(initNameIndex, message.Length - initNameIndex)}\"";
         }
     }
