@@ -2,9 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Codice.Client.BaseCommands.Merge.IncomingChanges;
-using PlasticPipe.PlasticProtocol.Messages;
-using UnityEngine;
 
 namespace Unity.Profiling.BuildLogAnalyzer
 {
@@ -15,35 +12,42 @@ namespace Unity.Profiling.BuildLogAnalyzer
         private const string JsonFormatClose = "]}";
 
         public static BuildLogParser Current { get; private set; }
-        
 
+        private int _maxTopMarkers;
+        private int _lastValidLine;
         private readonly List<Marker> _openMarkers = new();
         private readonly List<Marker> _closedMarkers = new();
 
+        public List<Marker> TopMarkers { get; }
         public string[] Lines { get; private set; }
         public long[] LinesTimeUs { get; private set; }
         public int CurrentLine { get; private set; }
-
+        public int CurrentLinePid { get; private set; }
         public long MinMarkerDurationUs { get; }
 
-        public BuildLogParser(long minDurationUs = 200000)
+        public BuildLogParser(long minDurationUs = 200000, int maxTopMarkers = 50)
         {
+            _maxTopMarkers = maxTopMarkers;
             MinMarkerDurationUs = minDurationUs;
+            TopMarkers = new List<Marker>(maxTopMarkers);
         }
 
         public void Analyze(string filePath, string outputPath)
         {
-            var usSinceStart = 0L;
+            var usSinceStartPerPid = new long[50]; //TODO: Move to a property?
             var hasInitialTime = false;
             var initialLineTime = new DateTime();
-            
+
+            _lastValidDatePerPid.Clear();
+            _lastValidLine = 0;
             Current = this;
             Lines = File.ReadAllLines(filePath);
             LinesTimeUs = new long[Lines.Length];
-            
+
             for (CurrentLine = 0; CurrentLine < Lines.Length; CurrentLine++)
             {
                 var line = Lines[CurrentLine];
+                CurrentLinePid = GetPID(ref line);
                 var currentMessageInitIndex = GetMessageInitIndex(ref line);
                 if (!TryParseDateTime(ref line, currentMessageInitIndex, out var currentLineTime))
                 {
@@ -55,59 +59,38 @@ namespace Unity.Profiling.BuildLogAnalyzer
                     hasInitialTime = true;
                     initialLineTime = currentLineTime;
                 }
-
-                LinesTimeUs[CurrentLine] = usSinceStart;
-
+                
+                var usSinceStart = usSinceStartPerPid[CurrentLinePid];
                 var lastUsSinceStart = usSinceStart;
-                usSinceStart = (long) currentLineTime.Subtract(initialLineTime).TotalMilliseconds * 1000;
+                usSinceStart = (long)currentLineTime.Subtract(initialLineTime).TotalMilliseconds * 1000;
+                usSinceStartPerPid[CurrentLinePid] = usSinceStart;
+                LinesTimeUs[CurrentLine] = usSinceStart;
+                
                 var message = line.Substring(currentMessageInitIndex, line.Length - currentMessageInitIndex);
-                var createdOrClosedMarker = CloseOpenMarkers(ref message, usSinceStart, CurrentLine + 1);
+                var createdOrClosedMarker = CloseOpenMarkers(ref message, usSinceStartPerPid, CurrentLine + 1);
                 createdOrClosedMarker |= CreateNewMarkers(ref message, usSinceStart, CurrentLine + 1);
 
                 if (!createdOrClosedMarker)
                 {
                     DetectLongMessage(usSinceStart, lastUsSinceStart, CurrentLine + 1);
                 }
+
+                _lastValidLine = CurrentLine;
             }
 
-            CloseAllOpenMarkers(usSinceStart, Lines.Length);
-            AddGlobalMarker(usSinceStart, Lines.Length);
+            CloseAllOpenMarkers(usSinceStartPerPid, Lines.Length);
+            AddGlobalMarker(usSinceStartPerPid, Lines.Length);
             OutputJson(outputPath);
             ClearResources();
         }
-        protected virtual bool TryParseDateTime(ref string line, int messageIndex, out DateTime time)
-        {
-            //return DateTime.TryParse(line.AsSpan(0, messageIndex), out time);
 
-            if (line.Length < 1 || line[0] != '[')
-            {
-                time = new DateTime();
-                return false;
-            }
-
-            time = new DateTime(2024, 12, 16,
-                int.Parse(line.AsSpan(1, 2)),
-                int.Parse(line.AsSpan(4, 2)),
-                int.Parse(line.AsSpan(7, 2)));
-            
-            return true;
-        }
-
-        public virtual int GetMessageInitIndex(ref string line)
-        {
-            //return 29;
-            
-            const int colonIndex = 13;
-            return line.Contains("[Step") ? line.IndexOf(']', colonIndex) + 2 : colonIndex;
-        }
-
-        private bool CloseOpenMarkers(ref string message, long usSinceStart, int line)
+        private bool CloseOpenMarkers(ref string message, long[] usSinceStartPerPid, int line)
         {
             var markerClosed = false;
             for (var i = 0; i < _openMarkers.Count; i++)
             {
                 var openMarker = _openMarkers[i];
-                if (openMarker.LogAndCheckFinish(ref message, usSinceStart, line))
+                if (openMarker.LogAndCheckFinish(ref message, usSinceStartPerPid, line))
                 {
                     markerClosed = true;
                     _openMarkers.RemoveAt(i--);
@@ -122,7 +105,41 @@ namespace Unity.Profiling.BuildLogAnalyzer
         {
             if (marker.DurationTimeUs > MinMarkerDurationUs)
             {
-                _closedMarkers.Add(marker);
+                AddClosedMarker(marker);
+            }
+        }
+
+        private void AddClosedMarker(Marker marker)
+        {
+            _closedMarkers.Add(marker);
+            var index = 0;
+
+            while (true)
+            {
+                if (index >= TopMarkers.Count)
+                {
+                    if (TopMarkers.Count < _maxTopMarkers)
+                    {
+                        TopMarkers.Add(marker);
+                    }
+
+                    return;
+                }
+
+                var currentMarker = TopMarkers[index];
+                if (currentMarker.DurationTimeUs > marker.DurationTimeUs)
+                {
+                    index++;
+                }
+                else
+                {
+                    TopMarkers.Insert(index, marker);
+                    if (TopMarkers.Count > _maxTopMarkers)
+                    {
+                        TopMarkers.RemoveAt(TopMarkers.Count - 1);
+                    }
+                    return;
+                }
             }
         }
 
@@ -155,32 +172,32 @@ namespace Unity.Profiling.BuildLogAnalyzer
             var usTimeSinceLastMessage = usSinceStart - lastUsSinceStart;
             if (usTimeSinceLastMessage > MinMarkerDurationUs)
             {
-                _closedMarkers.Add(new Marker(LongMessageMarkerType)
+                AddClosedMarker(new Marker(LongMessageMarkerType)
                 {
                     StartTimeUs = lastUsSinceStart + LongMessagesOffset,
                     DurationTimeUs = usTimeSinceLastMessage - LongMessagesOffset,
-                    InitLine = line - 1,
+                    InitLine = _lastValidLine + 1,
                     EndLine = line
                 });
             }
         }
 
-        private void CloseAllOpenMarkers(long usSinceStart, int lastLine)
+        private void CloseAllOpenMarkers(long[] usSinceStartPerPid, int lastLine)
         {
             foreach (var openMarker in _openMarkers)
             {
-                openMarker.Close(usSinceStart, lastLine);
+                openMarker.Close(usSinceStartPerPid, lastLine);
                 CloseMarker(openMarker);
             }
 
             _openMarkers.Clear();
         }
 
-        private void AddGlobalMarker(long usSinceStart, int lastLine)
+        private void AddGlobalMarker(long[] usSinceStartPerPid, int lastLine)
         {
-            _closedMarkers.Add(new Marker(GlobalMarkerType)
+            AddClosedMarker(new Marker(GlobalMarkerType)
             {
-                DurationTimeUs = usSinceStart,
+                DurationTimeUs = usSinceStartPerPid[0],
                 EndLine = lastLine
             });
         }
@@ -227,9 +244,82 @@ namespace Unity.Profiling.BuildLogAnalyzer
                 return halfIndex;
             }
 
-            return usTime > halfIndexUsTime 
-                ? CloserLineToUsTime(halfIndex + 1, rightBound, usTime) 
+            return usTime > halfIndexUsTime
+                ? CloserLineToUsTime(halfIndex + 1, rightBound, usTime)
                 : CloserLineToUsTime(leftBound, halfIndex - 1, usTime);
         }
+
+
+        #region Methods to adapt (TODO: Move to a separate object)
+
+        private readonly Dictionary<int, DateTime> _lastValidDatePerPid = new();
+        
+        protected virtual bool TryParseDateTime(ref string line, int messageIndex, out DateTime time)
+        {
+            //Bamboo logs
+            /* (line.Length < 1)
+            {
+                time = new DateTime();
+                return false;
+            }
+
+            var hourIndex = line.IndexOf(':') - 2;
+            var minuteIndex = hourIndex + 3;
+            var secondIndex = minuteIndex + 3;
+
+            time = new DateTime(2024, 12, 16,
+                int.Parse(line.AsSpan(hourIndex, 2)),
+                int.Parse(line.AsSpan(minuteIndex, 2)),
+                int.Parse(line.AsSpan(secondIndex, 2)));
+
+            return true;*/
+            
+            if (!line.StartsWith("2025"))
+            {
+                if (_lastValidDatePerPid.TryGetValue(CurrentLinePid, out var lastValidDate))
+                {
+                    time = lastValidDate;
+                    return true;
+                }
+                
+                time = new DateTime();
+                return false;
+            }
+
+            time = DateTime.Parse(line.AsSpan(0, 24));
+            _lastValidDatePerPid[CurrentLinePid] = time;
+            return true;
+        }
+
+        protected virtual int GetPID(ref string line)
+        {
+            var workerIndex = line.IndexOf("[Worker", StringComparison.Ordinal);
+
+            if (workerIndex < 0)
+            {
+                return 0;
+            }
+            
+            return int.Parse(line.AsSpan(workerIndex + 7, 1));
+        }
+
+        public virtual int GetMessageInitIndex(ref string line)
+        {
+            //Bamboo logs
+            //return line.IndexOf(':') + 7;
+            
+            /*if (line.Contains("[Worker"))
+            {
+                return 42;
+            }*/
+
+            if (!line.StartsWith("2025"))
+            {
+                return 0;
+            }
+            
+            return 32;
+        }
+        #endregion
     }
 }

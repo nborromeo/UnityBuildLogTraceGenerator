@@ -12,7 +12,7 @@ namespace Unity.Profiling.BuildLogAnalyzer.MarkerTypes
         public SingleMessageMarker()
         {
             formatOverride =
-                "{{\"name\": \"{0}\", \"ph\": \"X\", \"dur\": {1}, \"tid\": 1, \"ts\": {2}, \"pid\": 1,  \"args\": {{\"approxInit\":{3}, \"end\":{4}{5}}}}}";
+                "{{\"name\": \"{0}\", \"ph\": \"X\", \"dur\": {1}, \"tid\": 1, \"ts\": {2}, \"pid\": {6},  \"args\": {{\"approxInit\":{3}, \"end\":{4}{5}}}}}";
         }
 
         protected override bool CreateMarker(ref string message, long usSinceStart, int line, out Marker marker)

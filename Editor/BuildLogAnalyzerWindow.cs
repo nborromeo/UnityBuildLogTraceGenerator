@@ -5,6 +5,8 @@ namespace Unity.Profiling.BuildLogAnalyzer.Editor
 {
     public class BuildLogAnalyzerWindow : EditorWindow
     {
+        private Vector2 _scrollPosition;
+        private BuildLogParser _parser;
         private float _minDuration = 0.2f;
         private string _buildLogPath;
 
@@ -32,8 +34,26 @@ namespace Unity.Profiling.BuildLogAnalyzer.Editor
             {
                 var minDurationUs = (long) (_minDuration * 1000000);
                 var outputPath = Application.dataPath + "/../buildLogTrace.json";
-                new BuildLogParser(minDurationUs).Analyze(_buildLogPath, outputPath);
-                EditorUtility.DisplayDialog("Build Log Analyzer", "Analysis complete", "Ok");
+                _parser = new BuildLogParser(minDurationUs);
+                _parser.Analyze(_buildLogPath, outputPath);
+            }
+            
+            if (_parser != null)
+            {
+                EditorGUIUtility.labelWidth = this.position.width * 0.33f;
+                _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
+                var biggestMarkerDuration = _parser.TopMarkers[0].DurationTime;
+                foreach (var marker in _parser.TopMarkers)
+                {
+                    var minValue = 0f;
+                    var markerDuration = marker.DurationTime;
+
+                    EditorGUILayout.MinMaxSlider(
+                        $"[{marker.Pid}] ({marker.InitLine}:{marker.EndLine}) {marker.Type.name} {markerDuration}s",
+                        ref minValue, ref markerDuration, 
+                        0, biggestMarkerDuration);
+                }
+                EditorGUILayout.EndScrollView();
             }
         }
     }

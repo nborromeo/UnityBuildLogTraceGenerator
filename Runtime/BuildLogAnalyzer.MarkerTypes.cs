@@ -85,7 +85,12 @@ namespace Unity.Profiling.BuildLogAnalyzer
             {
                 name = "Scene load",
                 openText = "Opening scene ",
-                closeStartingTexts = new[] {"\tTotal Operation Time:   "},
+                closeStartingTexts = new[]
+                {
+                    "\tTotal Operation Time:   ", 
+                    "Problem detected while opening the Scene file",
+                    "Loaded scene "
+                },
             },
             new()
             {
@@ -95,34 +100,17 @@ namespace Unity.Profiling.BuildLogAnalyzer
             },
             new()
             {
-                name = "Packing artifacts",
-                openText = "Progress.Start Packing: ",
-                closeStartingTexts = new[] {"Packing: "}
-            },
-            new()
-            {
-                name = "Archiving artifacts",
-                openText = " [Publishing artifacts] Creating archive ",
-                closeContainsTexts = new[] {"] Archive was created, file size "}
-            },
-            new()
-            {
-                name = "Publishing artifacts",
-                openText = " [Publishing artifacts] Publishing ",
-                closeStartingTexts = new[] {" [Publishing artifacts] Publishing ", "Will publish "}
-            },
-            new()
-            {
-                name = "Reading build settings",
-                openText = " [Read build settings from revision ",
-                closeStartingTexts = new[] {"The build is removed from the queue"}
-            },
-            new()
-            {
                 name = "Archive and compress bundles",
                 openText = "DisplayProgressbar: Archive And Compress Bundles",
-                closeStartingTexts = new[] {"DisplayProgressbar: Generate Location Lists Task"}
-            }
+                closeStartingTexts = new[] {"DisplayProgressbar: "}
+            },
+            new()
+            {
+                name = "Task",
+                openText = "Starting task ",
+                closeStartingTexts = new[] {"Finished task"},
+                argsParser = new SimpleArgsParser { argName = "task", startIndex = 42}
+            },
         };
     }
 }

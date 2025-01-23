@@ -3,7 +3,7 @@ namespace Unity.Profiling.BuildLogAnalyzer
     public class MarkerType
     {
         public const string JsonFormat =
-            "{{\"name\": \"{0}\", \"ph\": \"X\", \"dur\": {1}, \"tid\": 1, \"ts\": {2}, \"pid\": 1,  \"args\": {{\"init\":{3}, \"end\":{4}{5}}}}}";
+            "{{\"name\": \"{0}\", \"ph\": \"X\", \"dur\": {1}, \"tid\": 1, \"ts\": {2}, \"pid\": {6},  \"args\": {{\"init\":{3}, \"end\":{4}{5}}}}}";
 
         public string name;
         public string openText;

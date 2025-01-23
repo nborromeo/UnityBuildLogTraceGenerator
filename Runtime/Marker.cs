@@ -12,6 +12,7 @@ namespace Unity.Profiling.BuildLogAnalyzer
         public long StartTimeUs { get; set; }
         public long DurationTimeUs { get; set; }
         public bool Closed { get; private set; }
+        public int Pid { get; internal set; }
 
         public bool HasInitMessage => InitLine >= 0;
         public bool HasEndMessage => EndLine >= 0;
@@ -24,26 +25,29 @@ namespace Unity.Profiling.BuildLogAnalyzer
         public ref string GetMessage(int indexOffset) => ref Parser.Lines[MessageLine - 1 + indexOffset];
         public int GetMessageInitIndex(int indexOffset) => BuildLogParser.Current.GetMessageInitIndex(ref GetMessage(indexOffset));
 
+        public float DurationTime => DurationTimeUs / 1000000f;
+
         public Marker(MarkerType type)
         {
+            Pid = BuildLogParser.Current.CurrentLinePid;
             Type = type;
         }
 
-        public bool LogAndCheckFinish(ref string message, long usSinceStart, int line)
+        public bool LogAndCheckFinish(ref string message, long[] usSinceStartPerPid, int line)
         {
             if (!Type.ShouldCloseMarker(ref message))
             {
                 return false;
             }
 
-            Close(usSinceStart, line);
+            Close(usSinceStartPerPid, line);
             return true;
         }
 
-        public void Close(long usSinceStart, int line)
+        public void Close(long[] usSinceStartPerPid, int line)
         {
             EndLine = line;
-            DurationTimeUs = usSinceStart - StartTimeUs;
+            DurationTimeUs = usSinceStartPerPid[Pid] - StartTimeUs;
             Close();
         }
 
@@ -66,8 +70,15 @@ namespace Unity.Profiling.BuildLogAnalyzer
                 name = Type.nameParser.GetName(this);
             }
 
-            sb.Append(string.Format(Type.Format, name ?? Type.name, DurationTimeUs, StartTimeUs, InitLine, EndLine,
-                args ?? string.Empty));
+            sb.Append(string.Format(
+                Type.Format, 
+                name ?? Type.name, 
+                DurationTimeUs, 
+                StartTimeUs, 
+                InitLine, 
+                EndLine,
+                args ?? string.Empty,
+                Pid));
         }
     }
 }
