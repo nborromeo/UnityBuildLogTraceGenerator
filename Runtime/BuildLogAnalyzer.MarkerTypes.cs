@@ -8,8 +8,9 @@ namespace Unity.Profiling.BuildLogAnalyzer
 {
     public partial class BuildLogParser
     {
-        private static MarkerType GlobalMarkerType = new() {name = "Entire Log"};
-        private static MarkerType LongMessageMarkerType = new() {name = "LongMessage"};
+        private const string ProgressBarTrackId = "Progress Bar";
+        private static MarkerType GlobalMarkerType = new() { name = "Entire Log" };
+        private static MarkerType LongMessageMarkerType = new() { name = "LongMessage" };
 
         public static readonly List<MarkerType> MarkerTypes = new()
         {
@@ -17,7 +18,14 @@ namespace Unity.Profiling.BuildLogAnalyzer
             {
                 name = "Unity Process",
                 openText = "Unity Editor version:",
-                closeStartingTexts = new[] {"Memory Statistics:"}
+                closeStartingTexts = new[] { "Memory Statistics:" }
+            },
+
+            new()
+            {
+                name = "AssetDatabase Initial Refresh",
+                openText = "Application.AssetDatabase Initial Refresh Start",
+                closeStartingTexts = new[] { "Application.AssetDatabase Initial Refresh End" }
             },
             new SingleMessageMarker
             {
@@ -37,7 +45,7 @@ namespace Unity.Profiling.BuildLogAnalyzer
             {
                 name = "Asset Import",
                 openText = "Start importing ",
-                mustHave = new[] {"-> (artifact id:"},
+                mustHave = new[] { "-> (artifact id:" },
                 preDurationText = "') in ",
                 postDurationText = " seconds",
                 argsParser = new AssetImporterArgsParser()
@@ -46,7 +54,7 @@ namespace Unity.Profiling.BuildLogAnalyzer
             {
                 name = "Asset Import",
                 openText = "Start importing ",
-                closeStartingTexts = new[] {" -> (artifact id: "},
+                closeStartingTexts = new[] { " -> (artifact id: " },
                 argsParser = new AssetImporterArgsParser()
             },
             new SingleMessageMarker
@@ -69,12 +77,13 @@ namespace Unity.Profiling.BuildLogAnalyzer
             {
                 name = "Domain Reload",
                 openText = "Begin MonoManager ReloadAssembly",
-                closeStartingTexts = new[] {"Domain Reload Profiling: "}
+                closeStartingTexts = new[] { "Domain Reload Profiling: " }
             },
             new()
             {
                 name = "Addressables Build",
                 openText = "DisplayProgressbar: Processing Addressable Group",
+                trackId = ProgressBarTrackId,
                 closeStartingTexts = new[]
                 {
                     "Addressable content build failure (duration : ",
@@ -87,7 +96,7 @@ namespace Unity.Profiling.BuildLogAnalyzer
                 openText = "Opening scene ",
                 closeStartingTexts = new[]
                 {
-                    "\tTotal Operation Time:   ", 
+                    "\tTotal Operation Time:   ",
                     "Problem detected while opening the Scene file",
                     "Loaded scene "
                 },
@@ -96,21 +105,43 @@ namespace Unity.Profiling.BuildLogAnalyzer
             {
                 name = "Build Process",
                 openText = "BuildPlayer: start building",
-                closeStartingTexts = new[] {"Build Finished, Result:"},
+                closeStartingTexts = new[] { "Build Finished, Result:" },
             },
             new()
             {
-                name = "Archive and compress bundles",
-                openText = "DisplayProgressbar: Archive And Compress Bundles",
-                closeStartingTexts = new[] {"DisplayProgressbar: "}
+                name = "Progress bar task",
+                openText = "DisplayProgressbar:",
+                trackId = ProgressBarTrackId,
+                closeStartingTexts = new[] { "DisplayProgressbar: " },
+                nameParser = new NameAfterCharacter { Character = ':' }
             },
             new()
             {
                 name = "Task",
                 openText = "Starting task ",
-                closeStartingTexts = new[] {"Finished task"},
-                argsParser = new SimpleArgsParser { argName = "task", startIndex = 42}
+                closeStartingTexts = new[] { "Finished task" },
+                argsParser = new SimpleArgsParser { argName = "task", startIndex = 42 }
             },
+            new()
+            {
+                name = "Shader stripping logging",
+                openText = "Shader Stripping - Total",
+                closeStartingTexts = new[] { "Stripping Runtime Debug Shader Variants" }
+            },
+            new()
+            {
+                name = "Compiling shader",
+                openText = "Compiling shader ",
+                closeStartingTexts = new[] { "    Full variant space", },
+                unskippable = true
+            },
+            new()
+            {
+                name = "Mesh data optimization",
+                openText = "Compiling mesh data optimization processing ",
+                closeStartingTexts = new[] { "    Processed in", },
+                unskippable = true
+            }
         };
     }
 }

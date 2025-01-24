@@ -4,6 +4,8 @@ namespace Unity.Profiling.BuildLogAnalyzer.MarkerTypes
 {
     public class SingleMessageMarker : MarkerType
     {
+        public const int DurationUsReduction = 1000;
+        
         public string preDurationText;
         public string postDurationText;
         public int muliplier = 1000000;
@@ -12,7 +14,7 @@ namespace Unity.Profiling.BuildLogAnalyzer.MarkerTypes
         public SingleMessageMarker()
         {
             formatOverride =
-                "{{\"name\": \"{0}\", \"ph\": \"X\", \"dur\": {1}, \"tid\": 1, \"ts\": {2}, \"pid\": {6},  \"args\": {{\"approxInit\":{3}, \"end\":{4}{5}}}}}";
+                "{{\"name\": \"{0}\", \"ph\": \"X\", \"dur\": {1}, \"tid\": \"{7}\", \"ts\": {2}, \"pid\": {6},  \"args\": {{\"approxInit\":{3}, \"end\":{4}{5}}}}}";
         }
 
         protected override bool CreateMarker(ref string message, long usSinceStart, int line, out Marker marker)
@@ -29,12 +31,14 @@ namespace Unity.Profiling.BuildLogAnalyzer.MarkerTypes
                 return false;
             }
 
-            var duration = durationParser?.ParseUs(message.Substring(durationInit, durationEnd - durationInit)) ??
+            var durationUs = durationParser?.ParseUs(message.Substring(durationInit, durationEnd - durationInit)) ??
                            double.Parse(message.AsSpan(durationInit, durationEnd - durationInit)) * muliplier;
+
+            durationUs -= DurationUsReduction;
 
             base.CreateMarker(ref message, usSinceStart, line, out marker);
             marker.EndLine = line;
-            marker.DurationTimeUs = (long) duration;
+            marker.DurationTimeUs = (long) durationUs;
             marker.StartTimeUs -= marker.DurationTimeUs;
             marker.InitLine = BuildLogParser.Current.CloserLineToUsTime(marker.StartTimeUs);
             marker.Close();

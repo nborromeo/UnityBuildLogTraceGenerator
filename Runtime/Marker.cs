@@ -1,16 +1,17 @@
+using System;
 using System.Text;
 
 namespace Unity.Profiling.BuildLogAnalyzer
 {
     public class Marker
     {
+        private long _durationTimeUs;
         private BuildLogParser Parser => BuildLogParser.Current;
 
         public MarkerType Type { get; }
         public long InitLine { get; set; }
         public long EndLine { get; set; }
         public long StartTimeUs { get; set; }
-        public long DurationTimeUs { get; set; }
         public bool Closed { get; private set; }
         public int Pid { get; internal set; }
 
@@ -26,6 +27,12 @@ namespace Unity.Profiling.BuildLogAnalyzer
         public int GetMessageInitIndex(int indexOffset) => BuildLogParser.Current.GetMessageInitIndex(ref GetMessage(indexOffset));
 
         public float DurationTime => DurationTimeUs / 1000000f;
+
+        public long DurationTimeUs
+        {
+            get => _durationTimeUs;
+            set => _durationTimeUs = Math.Max(value, BuildLogParser.MinMarkerDurationUs);
+        }
 
         public Marker(MarkerType type)
         {
@@ -78,7 +85,8 @@ namespace Unity.Profiling.BuildLogAnalyzer
                 InitLine, 
                 EndLine,
                 args ?? string.Empty,
-                Pid));
+                Pid,
+                Type.trackId));
         }
     }
 }
