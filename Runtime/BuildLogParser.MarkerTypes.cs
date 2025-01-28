@@ -137,11 +137,37 @@ namespace Unity.Profiling.BuildLogAnalyzer
             },
             new()
             {
+                name = "Compiling compute shader",
+                openText = "Compiling compute shader ",
+                closeStartingTexts = new[] { "    finished in", },
+                unskippable = true
+            },
+            new()
+            {
                 name = "Mesh data optimization",
                 openText = "Compiling mesh data optimization processing ",
                 closeStartingTexts = new[] { "    Processed in", },
                 unskippable = true
+            },
+                
+#region Project specific markers
+            new()
+            {
+                name = "Build stopwatch",
+                openText = "> !!Build Started!!",
+                closeStartingTexts = new[] { "Build Stopwatch: ", },
+                unskippable = true,
+                trackId = "Build stopwatch"
+            },
+            new()
+            {
+                name = "Build stopwatch",
+                openText = "Build Stopwatch: ",
+                closeStartingTexts = new[] { "Build Stopwatch: ", "Succeeded (T/F):"},
+                unskippable = true,
+                trackId = "Build stopwatch"
             }
+#endregion
         };
     }
 }
